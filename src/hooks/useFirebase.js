@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 
 // Флаг для включения/выключения Firebase
-const FIREBASE_ENABLED = false; // Установите в true после настройки Firebase
+const FIREBASE_ENABLED = true; // Установите в true после настройки Firebase
 
 // Заглушки для Firebase функций когда Firebase отключен
 const mockFirebaseService = {
