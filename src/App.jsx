@@ -369,7 +369,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.10 - ENHANCED delete debugging and Firebase-first approach!');
+  console.log('🚀 Budget App v2.2.11 - ADDED button click debugging!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -1038,7 +1038,8 @@ function App() {
   };
 
   const deleteTransaction = async (transactionId) => {
-    console.log('🗑️ Начинаем удаление транзакции:', { transactionId, familyId, syncMode });
+    console.log('� ФУНКЦИЯ deleteTransaction ВЫЗВАНА:', transactionId);
+    console.log('�🗑️ Начинаем удаление транзакции:', { transactionId, familyId, syncMode });
     
     const transaction = transactions.find(t => t.id === transactionId);
     if (!transaction) {
@@ -1252,7 +1253,15 @@ function App() {
                         {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount || 0)}
                       </div>
                       <button
-                        onClick={() => deleteTransaction(transaction.id)}
+                        onClick={() => {
+                          try {
+                            console.log('🖱️ Кнопка удаления нажата для транзакции:', transaction.id);
+                            console.log('📋 Полная информация о транзакции:', transaction);
+                            deleteTransaction(transaction.id);
+                          } catch (error) {
+                            console.error('❌ Ошибка в обработчике кнопки удаления:', error);
+                          }
+                        }}
                         className="text-red-400 hover:text-red-300 p-2 rounded-lg hover:bg-red-900/20 transition-colors"
                         title="Удалить операцию"
                       >
