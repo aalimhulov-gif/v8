@@ -21,6 +21,21 @@
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
 
     <title>💰 Семейный бюджет - Артур и Валерия</title>
+    
+    <!-- GitHub Pages SPA redirect script -->
+    <script type="text/javascript">
+      // GitHub Pages SPA redirect handling
+      (function(l) {
+        if (l.search[1] === '/' ) {
+          var decoded = l.search.slice(1).split('&').map(function(s) { 
+            return s.replace(/~and~/g, '&')
+          }).join('?');
+          window.history.replaceState(null, null,
+              l.pathname.slice(0, -1) + decoded + l.hash
+          );
+        }
+      }(window.location))
+    </script>
   </head>
   <body>
     <div id="root"></div>
