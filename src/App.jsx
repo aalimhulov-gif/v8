@@ -350,7 +350,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.5 - FIXED toLocaleString errors!');
+  console.log('🚀 Budget App v2.2.6 - FIXED transactions tab errors!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -735,7 +735,8 @@ function App() {
   // };
 
   const formatCurrency = useCallback((amount, currency = selectedCurrency) => {
-    const convertedAmount = currency === 'PLN' ? amount : amount / exchangeRates[currency];
+    const safeAmount = Number(amount) || 0;
+    const convertedAmount = currency === 'PLN' ? safeAmount : safeAmount / (exchangeRates[currency] || 1);
     const symbols = { PLN: 'zł', EUR: '€', USD: '$', UAH: '₴' };
     return `${convertedAmount.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${symbols[currency]}`;
   }, [selectedCurrency, exchangeRates]);
@@ -1151,12 +1152,14 @@ function App() {
                         <span className="mx-2 hidden sm:inline">•</span>
                         <span className="block sm:inline">{transaction.category}</span>
                         <span className="mx-2 hidden sm:inline">•</span>
-                        <span className="block sm:inline text-xs sm:text-sm">{transaction.date.toLocaleDateString('ru-RU')}</span>
+                        <span className="block sm:inline text-xs sm:text-sm">
+                          {transaction.date ? (transaction.date.toLocaleDateString ? transaction.date.toLocaleDateString('ru-RU') : new Date(transaction.date).toLocaleDateString('ru-RU')) : 'Неизвестная дата'}
+                        </span>
                       </div>
                     </div>
                     <div className="flex justify-between sm:justify-end items-center gap-4">
                       <div className={`text-xl sm:text-lg font-bold ${transaction.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount || 0)}
                       </div>
                       <button
                         onClick={() => deleteTransaction(transaction.id)}
@@ -1308,19 +1311,19 @@ function App() {
                   <div className="flex justify-between">
                     <span className="text-gray-300">Общий доход:</span>
                     <span className="text-green-400 font-bold">
-                      +{formatCurrency(transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))}
+                      +{formatCurrency(safeFilterTransactions(transactions, t => t.type === 'income').reduce((sum, t) => sum + (t.amount || 0), 0))}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-300">Общие расходы:</span>
                     <span className="text-red-400 font-bold">
-                      -{formatCurrency(transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0))}
+                      -{formatCurrency(safeFilterTransactions(transactions, t => t.type === 'expense').reduce((sum, t) => sum + (t.amount || 0), 0))}
                     </span>
                   </div>
                   <div className="flex justify-between border-t border-gray-600 pt-2">
                     <span className="text-gray-300">Общий баланс:</span>
                     <span className="text-white font-bold">
-                      {formatCurrency(Object.values(balances).reduce((sum, balance) => sum + balance, 0))}
+                      {formatCurrency(Object.values(balances || {}).reduce((sum, balance) => sum + (balance || 0), 0))}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -1545,13 +1548,13 @@ function App() {
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-gray-800/50 backdrop-blur-sm p-4 rounded-xl text-center">
                 <div className="text-2xl font-bold text-green-400">
-                  +{formatCurrency(transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))}
+                  +{formatCurrency(safeFilterTransactions(transactions, t => t.type === 'income').reduce((sum, t) => sum + (t.amount || 0), 0))}
                 </div>
                 <div className="text-sm text-gray-300">Доходы в месяце</div>
               </div>
               <div className="bg-gray-800/50 backdrop-blur-sm p-4 rounded-xl text-center">
                 <div className="text-2xl font-bold text-red-400">
-                  -{formatCurrency(transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0))}
+                  -{formatCurrency(safeFilterTransactions(transactions, t => t.type === 'expense').reduce((sum, t) => sum + (t.amount || 0), 0))}
                 </div>
                 <div className="text-sm text-gray-300">Расходы в месяце</div>
               </div>
