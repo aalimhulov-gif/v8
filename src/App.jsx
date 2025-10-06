@@ -311,7 +311,16 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
     transactions.forEach(transaction => {
       if (transaction.type === 'expense' && transaction.date && transaction.amount) {
         try {
-          const transactionDate = new Date(transaction.date);
+          let transactionDate;
+          
+          // Если это Firebase Timestamp
+          if (transaction.date.toDate && typeof transaction.date.toDate === 'function') {
+            transactionDate = transaction.date.toDate();
+          } else {
+            // Если это строка или обычный Date
+            transactionDate = new Date(transaction.date);
+          }
+          
           if (!isNaN(transactionDate.getTime())) {
             const month = transactionDate.toLocaleDateString('ru-RU', { 
               year: 'numeric', 
@@ -360,7 +369,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.8 - FIXED delete transaction sync with Firebase!');
+  console.log('🚀 Budget App v2.2.9 - FIXED Firebase ID sync and date display!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -946,7 +955,7 @@ function App() {
     const amount = parseFloat(formData.get('amount'));
     const description = formData.get('description') || formData.get('category');
     const newTransaction = {
-      id: Date.now(),
+      id: Date.now(), // Временный ID для локального состояния
       user: formData.get('user'),
       type: formData.get('type'),
       amount: amount,
@@ -960,8 +969,16 @@ function App() {
     if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
       try {
         console.log('Отправляем транзакцию в Firebase:', { familyId, newTransaction });
-        await addTransactionFirestore(familyId, newTransaction);
-        console.log('✅ Транзакция сохранена в Firebase');
+        const result = await addTransactionFirestore(familyId, newTransaction);
+        
+        if (result.success) {
+          console.log('✅ Транзакция сохранена в Firebase с ID:', result.id);
+          // НЕ добавляем локально - Firebase подписка сама обновит состояние с правильным ID
+        } else {
+          console.error('❌ Ошибка сохранения в Firebase:', result.error);
+          // В случае ошибки сохраняем локально
+          setTransactions(prev => [...prev, newTransaction]);
+        }
       } catch (error) {
         console.error('❌ Ошибка сохранения в Firebase:', error);
         // В случае ошибки сохраняем локально
@@ -1186,7 +1203,29 @@ function App() {
                         <span className="block sm:inline">{transaction.category}</span>
                         <span className="mx-2 hidden sm:inline">•</span>
                         <span className="block sm:inline text-xs sm:text-sm">
-                          {transaction.date ? (transaction.date.toLocaleDateString ? transaction.date.toLocaleDateString('ru-RU') : new Date(transaction.date).toLocaleDateString('ru-RU')) : 'Неизвестная дата'}
+                          {(() => {
+                            try {
+                              if (!transaction.date) return 'Неизвестная дата';
+                              
+                              // Если это Firebase Timestamp
+                              if (transaction.date.toDate && typeof transaction.date.toDate === 'function') {
+                                return transaction.date.toDate().toLocaleDateString('ru-RU');
+                              }
+                              
+                              // Если это уже Date объект
+                              if (transaction.date.toLocaleDateString && typeof transaction.date.toLocaleDateString === 'function') {
+                                return transaction.date.toLocaleDateString('ru-RU');
+                              }
+                              
+                              // Если это строка или timestamp
+                              const date = new Date(transaction.date);
+                              if (isNaN(date.getTime())) return 'Некорректная дата';
+                              return date.toLocaleDateString('ru-RU');
+                            } catch (error) {
+                              console.warn('Ошибка обработки даты:', transaction.date, error);
+                              return 'Ошибка даты';
+                            }
+                          })()}
                         </span>
                       </div>
                     </div>
