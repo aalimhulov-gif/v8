@@ -17,8 +17,11 @@ import { db } from './firebase/config.js';
 
 // Семьи
 export const createFamily = async (familyCode, familyName, createdBy) => {
+  console.log('🔥 Firebase createFamily вызвана:', { familyCode, familyName, createdBy });
   try {
     const familyRef = doc(db, 'families', familyCode);
+    console.log('📝 Сохраняем документ в Firestore:', familyRef.path);
+    
     await setDoc(familyRef, {
       familyCode,
       familyName,
@@ -31,9 +34,11 @@ export const createFamily = async (familyCode, familyName, createdBy) => {
         shared: 5670
       }
     });
+    
+    console.log('✅ Семья успешно создана в Firebase');
     return { success: true, familyCode };
   } catch (error) {
-    console.error('Ошибка создания семьи:', error);
+    console.error('❌ Ошибка создания семьи в Firebase:', error);
     return { success: false, error: error.message };
   }
 };

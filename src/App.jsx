@@ -589,13 +589,13 @@ function App() {
   // Создание новой семьи
   const createFamily = async (name) => {
     const newFamilyCode = generateFamilyCode();
+    console.log('🚀 Создание семьи:', { newFamilyCode, name });
     
     try {
       // Создаем семью в Firebase
-      const result = await createFamilyFirestore(newFamilyCode, name, {
-        balances: balances,
-        categories: categories
-      });
+      console.log('📡 Отправляем запрос в Firebase...');
+      const result = await createFamilyFirestore(newFamilyCode, name, name);
+      console.log('📋 Результат от Firebase:', result);
       
       if (result.success) {
         setFamilyCode(newFamilyCode);
@@ -610,6 +610,7 @@ function App() {
         saveToLocalStorage('isConnectedToFamily', true);
         saveToLocalStorage('syncMode', 'cloud');
         
+        console.log('✅ Семья создана успешно!', { familyCode: newFamilyCode, familyId: newFamilyCode, syncMode: 'cloud' });
         showNotification(`Семья создана в Firebase! Код: ${newFamilyCode}`, 'success');
       } else {
         throw new Error(result.error);
