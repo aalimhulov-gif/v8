@@ -1,0 +1,14 @@
+{
+  "name": "Семейный бюджет - Артур и Валерия",
+  "short_name": "Семейный бюджет",
+  "description": "Приложение для управления семейным бюджетом Артура и Валерии",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "icons": [],
+  "categories": ["finance", "productivity", "lifestyle"],
+  "lang": "ru"
+}

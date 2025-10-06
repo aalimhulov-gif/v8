@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/v8/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Приложение для управления семейным бюджетом Артура и Валерии"
+    />
+    <meta name="theme-color" content="#3b82f6" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Семейный бюджет" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/v8/manifest.json" />
+
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" sizes="152x152" href="/v8/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/v8/icons/icon-192x192.png" />
+
+    <title>💰 Семейный бюджет - Артур и Валерия</title>
+
+    <!-- GitHub Pages SPA redirect script -->
+    <script type="text/javascript">
+      // GitHub Pages SPA redirect handling
+      (function (l) {
+        if (l.search[1] === '/') {
+          var decoded = l.search
+            .slice(1)
+            .split('&')
+            .map(function (s) {
+              return s.replace(/~and~/g, '&');
+            })
+            .join('?');
+          window.history.replaceState(null, null, l.pathname.slice(0, -1) + decoded + l.hash);
+        }
+      })(window.location);
+    </script>
+    <script type="module" crossorigin src="/v8/assets/index-D3CiGUkS.js"></script>
+    <link rel="stylesheet" crossorigin href="/v8/assets/index-OlqjbJAK.css">
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- PWA Service Worker -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker
+            .register('/sw.js')
+            .then(registration => {
+              console.log('SW registered: ', registration);
+            })
+            .catch(registrationError => {
+              console.log('SW registration failed: ', registrationError);
+            });
+        });
+      }
+    </script>
+  </body>
+</html>
