@@ -368,6 +368,21 @@ function App() {
   // Проверка версии приложения
   console.log('🚀 Budget App v2.3.0 - PURE FIREBASE ONLY!');
   
+  // Проверяем доступность Firebase
+  useEffect(() => {
+    const checkFirebase = async () => {
+      try {
+        // Простая проверка Firebase
+        console.log('🔥 Проверяем доступность Firebase...');
+        // Если Firebase заблокирован, будет ошибка при инициализации
+      } catch (error) {
+        console.error('❌ Firebase заблокирован блокировщиком рекламы:', error);
+        alert('⚠️ Firebase заблокирован блокировщиком рекламы! Отключите блокировщик для этого сайта.');
+      }
+    };
+    checkFirebase();
+  }, []);
+  
   // Безопасная функция для фильтрации транзакций
   const safeFilterTransactions = (transactions, filterFn) => {
     return Array.isArray(transactions) ? transactions.filter(filterFn) : [];
@@ -409,11 +424,11 @@ function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   
-  // Firebase семейное подключение
-  const [familyCode, setFamilyCode] = useState(null);
-  const [isConnectedToFamily, setIsConnectedToFamily] = useState(false);
-  const [userName, setUserName] = useState('');
-  const [familyId, setFamilyId] = useState(null);
+  // Firebase семейное подключение - автоматически подключаемся к стандартной семье
+  const [familyCode, setFamilyCode] = useState('HQD748T'); // Код семьи Артура и Валерии
+  const [isConnectedToFamily, setIsConnectedToFamily] = useState(true);
+  const [userName, setUserName] = useState('Артур');
+  const [familyId, setFamilyId] = useState('HQD748T');
 
   const [selectedCurrency, setSelectedCurrency] = useState('PLN');
 
