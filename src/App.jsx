@@ -1038,33 +1038,19 @@ function App() {
   };
 
   const deleteTransaction = async (transactionId) => {
-    console.log('� ФУНКЦИЯ deleteTransaction ВЫЗВАНА:', transactionId);
-    console.log('�🗑️ Начинаем удаление транзакции:', { transactionId, familyId, syncMode });
-    
     const transaction = transactions.find(t => t.id === transactionId);
-    if (!transaction) {
-      console.error('❌ Транзакция не найдена:', transactionId);
-      return;
-    }
+    if (!transaction) return;
     
-    console.log('� Найдена транзакция для удаления:', transaction);
-    
-    // Подтверждение удаления
     if (!confirm(`Удалить операцию "${transaction.description}" на сумму ${transaction.amount || 0} zł?`)) {
       return;
     }
 
-    console.log('✅ Пользователь подтвердил удаление');
-    
-    // Сначала удаляем из Firebase, чтобы избежать конфликтов с подпиской
+    // Firebase режим - удаляем только из Firebase, подписка обновит UI
     if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
       try {
-        console.log('🔥 Удаляем транзакцию из Firebase:', { familyId, transactionId });
         const result = await deleteTransactionFirestore(familyId, transactionId);
         
         if (result.success) {
-          console.log('✅ Транзакция успешно удалена из Firebase');
-          
           // Обновляем баланс в Firebase
           const newBalance = transaction.type === 'income' 
             ? balances[transaction.user] - (transaction.amount || 0)
@@ -1075,23 +1061,17 @@ function App() {
             [transaction.user]: newBalance
           };
           
-          console.log('💰 Обновляем баланс в Firebase:', updatedBalances);
           await updateFamilyBalances(familyId, updatedBalances);
-          console.log('✅ Баланс обновлён в Firebase после удаления');
-          
-          // НЕ обновляем локально - Firebase подписка сама обновит
           showNotification('Операция удалена!', 'success');
         } else {
-          console.error('❌ Ошибка удаления из Firebase:', result.error);
           showNotification('Ошибка удаления операции!', 'error');
         }
       } catch (error) {
-        console.error('❌ Исключение при удалении транзакции из Firebase:', error);
+        console.error('Ошибка удаления транзакции:', error);
         showNotification('Ошибка удаления операции!', 'error');
       }
     } else {
-      console.log('💾 Удаляем локально (Firebase не активен)');
-      // Обновляем баланс локально (возвращаем деньги)
+      // Локальный режим - обновляем состояние напрямую
       const newBalance = transaction.type === 'income' 
         ? balances[transaction.user] - (transaction.amount || 0)
         : balances[transaction.user] + (transaction.amount || 0);
@@ -1101,12 +1081,10 @@ function App() {
         [transaction.user]: newBalance
       }));
       
-      // Удаляем операцию локально
       setTransactions(prev => prev.filter(t => t.id !== transactionId));
       showNotification('Операция удалена!', 'success');
     }
   };
-
   const addGoal = (formData) => {
     const newGoal = {
       id: Date.now(),

@@ -11,16 +11,14 @@ import {
   orderBy, 
   onSnapshot, 
   serverTimestamp,
-  getDocs 
+  getDocs
 } from 'firebase/firestore';
 import { db } from './firebase/config.js';
 
 // Семьи
 export const createFamily = async (familyCode, familyName, createdBy) => {
-  console.log('🔥 Firebase createFamily вызвана:', { familyCode, familyName, createdBy });
   try {
     const familyRef = doc(db, 'families', familyCode);
-    console.log('📝 Сохраняем документ в Firestore:', familyRef.path);
     
     await setDoc(familyRef, {
       familyCode,
@@ -35,10 +33,9 @@ export const createFamily = async (familyCode, familyName, createdBy) => {
       }
     });
     
-    console.log('✅ Семья успешно создана в Firebase');
     return { success: true, familyCode };
   } catch (error) {
-    console.error('❌ Ошибка создания семьи в Firebase:', error);
+    console.error('❌ Ошибка создания семьи:', error);
     return { success: false, error: error.message };
   }
 };
@@ -63,23 +60,7 @@ export const joinFamily = async (familyCode, memberName) => {
     
     return { success: true, family: { ...familyData, members: [...familyData.members, memberName] } };
   } catch (error) {
-    console.error('Ошибка подключения к семье:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-export const getFamilyData = async (familyCode) => {
-  try {
-    const familyRef = doc(db, 'families', familyCode);
-    const familyDoc = await getDoc(familyRef);
-    
-    if (!familyDoc.exists()) {
-      return { success: false, error: 'Семья не найдена' };
-    }
-    
-    return { success: true, family: familyDoc.data() };
-  } catch (error) {
-    console.error('Ошибка получения данных семьи:', error);
+    console.error('❌ Ошибка подключения к семье:', error);
     return { success: false, error: error.message };
   }
 };
@@ -130,17 +111,11 @@ export const updateTransaction = async (familyCode, transactionId, updates) => {
 
 export const deleteTransaction = async (familyCode, transactionId) => {
   try {
-    console.log('🔥 Firebase: Удаляем транзакцию:', { familyCode, transactionId });
     const transactionRef = doc(db, 'families', familyCode, 'transactions', transactionId);
-    console.log('📍 Firebase: Путь к документу:', transactionRef.path);
-    
     await deleteDoc(transactionRef);
-    console.log('✅ Firebase: Документ транзакции удалён');
-    
     return { success: true };
   } catch (error) {
-    console.error('❌ Firebase: Ошибка удаления транзакции:', error);
-    console.error('❌ Firebase: Детали ошибки:', { familyCode, transactionId, error: error.message });
+    console.error('❌ Ошибка удаления транзакции:', error);
     return { success: false, error: error.message };
   }
 };
@@ -224,22 +199,16 @@ export const subscribeToFamilyData = (familyCode, callback) => {
 };
 
 export const subscribeToTransactions = (familyCode, callback) => {
-  console.log('🔔 Подписка на транзакции для семьи:', familyCode);
   const transactionRef = collection(db, 'families', familyCode, 'transactions');
   const q = query(transactionRef, orderBy('createdAt', 'desc'));
   
   return onSnapshot(q, (querySnapshot) => {
     const transactions = [];
-    console.log('📄 Firebase: Получено документов в подписке:', querySnapshot.size);
     
     querySnapshot.forEach((doc) => {
-      const transactionData = { id: doc.id, ...doc.data() };
-      transactions.push(transactionData);
-      console.log('📄 Firebase: Транзакция из подписки:', { id: doc.id, description: transactionData.description });
+      transactions.push({ id: doc.id, ...doc.data() });
     });
     
-    console.log('🔄 Обновление транзакций из Firebase:', transactions.length);
-    console.log('📋 Список ID транзакций:', transactions.map(t => t.id));
     callback({ success: true, transactions });
   }, (error) => {
     console.error('❌ Ошибка подписки на транзакции:', error);
@@ -248,7 +217,6 @@ export const subscribeToTransactions = (familyCode, callback) => {
 };
 
 export const subscribeToGoals = (familyCode, callback) => {
-  console.log('🎯 Подписка на цели для семьи:', familyCode);
   const goalRef = collection(db, 'families', familyCode, 'goals');
   
   return onSnapshot(goalRef, (querySnapshot) => {
