@@ -51,12 +51,19 @@ export const useFirebase = () => {
       // Проверяем подключение к Firebase
       const testFirebase = async () => {
         try {
-          await import('../firebase-service.js');
-          console.log('✅ Firebase сервисы загружены успешно');
+          // Простая проверка - пытаемся инициализировать Firebase
+          const { db } = await import('../firebase/config.js');
+          console.log('✅ Firebase конфигурация загружена успешно');
+          
+          // Проверяем подключение к Firestore
+          const { doc, getDoc } = await import('firebase/firestore');
+          await getDoc(doc(db, 'test', 'connection'));
+          
+          console.log('✅ Firestore подключен успешно');
           setIsConnected(true);
           setError(null);
         } catch (err) {
-          console.error('❌ Ошибка загрузки Firebase:', err);
+          console.error('❌ Ошибка подключения к Firebase:', err);
           setError(err.message);
           setIsConnected(false);
         }
