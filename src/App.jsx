@@ -546,11 +546,11 @@ function App() {
     console.log('🔍 Проверка условий Firebase подписок:', {
       familyId: familyId,
       syncMode: syncMode,
-      condition: !familyId || syncMode !== 'cloud',
-      shouldReturn: !familyId || syncMode !== 'cloud'
+      condition: !familyId || (syncMode !== 'cloud' && syncMode !== 'firebase'),
+      shouldReturn: !familyId || (syncMode !== 'cloud' && syncMode !== 'firebase')
     });
     
-    if (!familyId || syncMode !== 'cloud') {
+    if (!familyId || (syncMode !== 'cloud' && syncMode !== 'firebase')) {
       console.log('❌ Firebase подписки НЕ активированы:', { familyId, syncMode });
       return;
     }
@@ -634,15 +634,15 @@ function App() {
         setFamilyId(newFamilyCode); // Используем familyCode как ID
         setUserName(name);
         setIsConnectedToFamily(true);
-        setSyncMode('cloud');
+        setSyncMode('firebase');
         
         saveToLocalStorage('familyCode', newFamilyCode);
         saveToLocalStorage('familyId', newFamilyCode);
         saveToLocalStorage('userName', name);
         saveToLocalStorage('isConnectedToFamily', true);
-        saveToLocalStorage('syncMode', 'cloud');
+        saveToLocalStorage('syncMode', 'firebase');
         
-        console.log('✅ Семья создана успешно!', { familyCode: newFamilyCode, familyId: newFamilyCode, syncMode: 'cloud' });
+        console.log('✅ Семья создана успешно!', { familyCode: newFamilyCode, familyId: newFamilyCode, syncMode: 'firebase' });
         showNotification(`Семья создана в Firebase! Код: ${newFamilyCode}`, 'success');
       } else {
         throw new Error(result.error);
@@ -671,7 +671,7 @@ function App() {
         setFamilyId(code.toUpperCase()); // Используем familyCode как ID
         setUserName(name);
         setIsConnectedToFamily(true);
-        setSyncMode('cloud');
+        setSyncMode('firebase');
         
         // Синхронизируем данные из Firebase
         if (result.family.balances) {
@@ -682,7 +682,7 @@ function App() {
         saveToLocalStorage('familyId', code.toUpperCase());
         saveToLocalStorage('userName', name);
         saveToLocalStorage('isConnectedToFamily', true);
-        saveToLocalStorage('syncMode', 'cloud');
+        saveToLocalStorage('syncMode', 'firebase');
         
         showNotification(`Подключение к семье ${code.toUpperCase()} успешно!`, 'success');
       } else {
@@ -939,8 +939,8 @@ function App() {
     };
     
     // Если семья подключена, сохраняем в Firebase
-    console.log('Проверка условий Firebase:', { familyId, syncMode, condition: familyId && syncMode === 'cloud' });
-    if (familyId && syncMode === 'cloud') {
+    console.log('Проверка условий Firebase:', { familyId, syncMode, condition: familyId && (syncMode === 'cloud' || syncMode === 'firebase') });
+    if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
       try {
         console.log('Отправляем транзакцию в Firebase:', { familyId, newTransaction });
         await addTransactionFirestore(familyId, newTransaction);
@@ -970,7 +970,7 @@ function App() {
     }
     
     // Если семья подключена, обновляем баланс в Firebase
-    if (familyId && syncMode === 'cloud') {
+    if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
       try {
         await updateFamilyBalances(familyId, {
           [newTransaction.user]: newTransaction.type === 'income' 
