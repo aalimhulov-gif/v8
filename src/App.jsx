@@ -532,20 +532,27 @@ function App() {
   useEffect(() => {
     if (!familyId || syncMode !== 'cloud') return;
 
-    const unsubscribeTransactions = subscribeToTransactions(familyId, (newTransactions) => {
-      console.log('Получены новые транзакции из Firebase:', newTransactions);
-      // Проверяем что newTransactions является массивом
-      if (Array.isArray(newTransactions)) {
-        setTransactions(newTransactions);
+    const unsubscribeTransactions = subscribeToTransactions(familyId, (result) => {
+      console.log('Получены новые транзакции из Firebase:', result);
+      // Проверяем что result содержит транзакции
+      if (result.success && Array.isArray(result.transactions)) {
+        setTransactions(result.transactions);
+        console.log('🔄 Транзакции обновлены в реальном времени!', result.transactions.length);
       } else {
-        console.warn('Транзакции из Firebase не являются массивом:', newTransactions);
+        console.warn('Транзакции из Firebase не содержат данные:', result);
         setTransactions([]);
       }
     });
 
-    const unsubscribeGoals = subscribeToGoals(familyId, (newGoals) => {
-      console.log('Получены новые цели из Firebase:', newGoals);
-      setGoals(newGoals);
+    const unsubscribeGoals = subscribeToGoals(familyId, (result) => {
+      console.log('Получены новые цели из Firebase:', result);
+      if (result.success && Array.isArray(result.goals)) {
+        setGoals(result.goals);
+        console.log('🎯 Цели обновлены в реальном времени!', result.goals.length);
+      } else {
+        console.warn('Цели из Firebase не содержат данные:', result);
+        setGoals([]);
+      }
     });
 
     const unsubscribeFamilyData = subscribeToFamilyData(familyId, (familyData) => {

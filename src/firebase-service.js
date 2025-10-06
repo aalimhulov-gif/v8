@@ -218,6 +218,7 @@ export const subscribeToFamilyData = (familyCode, callback) => {
 };
 
 export const subscribeToTransactions = (familyCode, callback) => {
+  console.log('🔔 Подписка на транзакции для семьи:', familyCode);
   const transactionRef = collection(db, 'families', familyCode, 'transactions');
   const q = query(transactionRef, orderBy('createdAt', 'desc'));
   
@@ -226,11 +227,16 @@ export const subscribeToTransactions = (familyCode, callback) => {
     querySnapshot.forEach((doc) => {
       transactions.push({ id: doc.id, ...doc.data() });
     });
+    console.log('🔄 Обновление транзакций из Firebase:', transactions.length);
     callback({ success: true, transactions });
+  }, (error) => {
+    console.error('❌ Ошибка подписки на транзакции:', error);
+    callback({ success: false, error: error.message, transactions: [] });
   });
 };
 
 export const subscribeToGoals = (familyCode, callback) => {
+  console.log('🎯 Подписка на цели для семьи:', familyCode);
   const goalRef = collection(db, 'families', familyCode, 'goals');
   
   return onSnapshot(goalRef, (querySnapshot) => {
@@ -238,6 +244,10 @@ export const subscribeToGoals = (familyCode, callback) => {
     querySnapshot.forEach((doc) => {
       goals.push({ id: doc.id, ...doc.data() });
     });
+    console.log('🔄 Обновление целей из Firebase:', goals.length);
     callback({ success: true, goals });
+  }, (error) => {
+    console.error('❌ Ошибка подписки на цели:', error);
+    callback({ success: false, error: error.message, goals: [] });
   });
 };
