@@ -349,6 +349,9 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 
 // Главный компонент приложения
 function App() {
+  // Проверка версии приложения
+  console.log('🚀 Budget App v2.2.0 - Real-time Firebase Sync загружен!');
+  
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
   
@@ -1448,7 +1451,7 @@ function App() {
                 <div className="pt-4 border-t border-gray-600">
                   <h4 className="text-white font-medium mb-3">Информация о приложении</h4>
                   <div className="text-sm text-gray-400 space-y-1">
-                    <p>Версия: 2.0.1</p>
+                    <p>Версия: 2.2.0 🔥 Real-time Firebase</p>
                     <p>Последнее обновление: 6 октября 2025</p>
                     <p>Функции: PWA готов, все основные возможности</p>
                   </div>
