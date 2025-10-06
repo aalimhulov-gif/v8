@@ -580,10 +580,16 @@ function App() {
       }
     });
 
-    const unsubscribeFamilyData = subscribeToFamilyData(familyId, (familyData) => {
-      console.log('Получены данные семьи из Firebase:', familyData);
-      if (familyData.balances) {
-        setBalances(familyData.balances);
+    const unsubscribeFamilyData = subscribeToFamilyData(familyId, (result) => {
+      console.log('Получены данные семьи из Firebase:', result);
+      if (result.success && result.family) {
+        console.log('🔄 Данные семьи:', result.family);
+        if (result.family.balances) {
+          console.log('💰 Обновляем баланс из Firebase:', result.family.balances);
+          setBalances(result.family.balances);
+        }
+      } else {
+        console.warn('Данные семьи из Firebase некорректны:', result);
       }
     });
 
@@ -972,13 +978,29 @@ function App() {
     // Если семья подключена, обновляем баланс в Firebase
     if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
       try {
-        await updateFamilyBalances(familyId, {
-          [newTransaction.user]: newTransaction.type === 'income' 
-            ? balances[newTransaction.user] + amount 
-            : balances[newTransaction.user] - amount
+        const newBalance = newTransaction.type === 'income' 
+          ? balances[newTransaction.user] + amount 
+          : balances[newTransaction.user] - amount;
+        
+        const updatedBalances = {
+          ...balances,
+          [newTransaction.user]: newBalance
+        };
+        
+        console.log('💰 Обновляем баланс в Firebase:', {
+          user: newTransaction.user,
+          oldBalance: balances[newTransaction.user],
+          amount: amount,
+          type: newTransaction.type,
+          newBalance: newBalance,
+          fullBalances: updatedBalances
         });
+        
+        const result = await updateFamilyBalances(familyId, updatedBalances);
+        
+        console.log('✅ Результат обновления баланса в Firebase:', result);
       } catch (error) {
-        console.error('Ошибка обновления баланса в Firebase:', error);
+        console.error('❌ Ошибка обновления баланса в Firebase:', error);
       }
     }
     
