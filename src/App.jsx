@@ -11,7 +11,7 @@ import {
   subscribeToGoals,
   addTransaction as addTransactionFirestore,
   updateGoal,
-  updateBalances
+  updateFamilyBalances
 } from './firebase-service.js';
 
 // Компонент модального окна
@@ -920,7 +920,7 @@ function App() {
     // Если семья подключена, обновляем баланс в Firebase
     if (familyId && syncMode === 'cloud') {
       try {
-        await updateBalances(familyId, {
+        await updateFamilyBalances(familyId, {
           [newTransaction.user]: newTransaction.type === 'income' 
             ? balances[newTransaction.user] + amount 
             : balances[newTransaction.user] - amount
