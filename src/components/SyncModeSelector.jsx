@@ -6,6 +6,13 @@ const SyncModeSelector = ({ onModeChange, currentMode = 'local' }) => {
   const [mode, setMode] = useState(currentMode);
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
 
+  // Отладочная информация
+  console.log('🔍 SyncModeSelector Firebase Status:', {
+    enabled: firebaseEnabled,
+    connected: firebaseConnected,
+    error: firebaseError
+  });
+
   const handleModeChange = (newMode) => {
     setMode(newMode);
     if (onModeChange) {

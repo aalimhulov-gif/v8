@@ -1263,7 +1263,15 @@ function App() {
                     onModeChange={(mode) => {
                       console.log('Режим синхронизации изменен на:', mode);
                       if (mode === 'firebase') {
-                        showNotification('Firebase пока не настроен. См. FIREBASE_SETUP.md', 'warning');
+                        if (firebaseConnected) {
+                          showNotification('🔥 Переключено на Firebase! Облачная синхронизация активна.', 'success');
+                        } else if (firebaseError) {
+                          showNotification(`❌ Ошибка Firebase: ${firebaseError}`, 'error');
+                        } else {
+                          showNotification('⚠️ Firebase включен, но подключение не проверено', 'warning');
+                        }
+                      } else {
+                        showNotification('📱 Переключено на локальный режим', 'success');
                       }
                     }}
                   />
@@ -1288,7 +1296,7 @@ function App() {
                 <div className="pt-4 border-t border-gray-600">
                   <h4 className="text-white font-medium mb-3">Информация о приложении</h4>
                   <div className="text-sm text-gray-400 space-y-1">
-                    <p>Версия: 2.0.0</p>
+                    <p>Версия: 2.0.1</p>
                     <p>Последнее обновление: 6 октября 2025</p>
                     <p>Функции: PWA готов, все основные возможности</p>
                   </div>

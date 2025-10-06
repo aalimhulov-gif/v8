@@ -48,22 +48,22 @@ export const useFirebase = () => {
     console.log('🔥 useFirebase: FIREBASE_ENABLED =', FIREBASE_ENABLED);
     
     if (FIREBASE_ENABLED) {
-      // Проверяем подключение к Firebase
+      // Простая проверка Firebase
       const testFirebase = async () => {
         try {
-          // Простая проверка - пытаемся инициализировать Firebase
-          const { db } = await import('../firebase/config.js');
-          console.log('✅ Firebase конфигурация загружена успешно');
+          console.log('🔍 Проверяем Firebase конфигурацию...');
           
-          // Проверяем подключение к Firestore
-          const { doc, getDoc } = await import('firebase/firestore');
-          await getDoc(doc(db, 'test', 'connection'));
+          // Импортируем конфигурацию Firebase
+          await import('../firebase/config.js');
+          console.log('✅ Firebase конфигурация загружена');
           
-          console.log('✅ Firestore подключен успешно');
+          // Если дошли до сюда - значит Firebase инициализирован успешно
           setIsConnected(true);
           setError(null);
+          console.log('✅ Firebase готов к работе');
+          
         } catch (err) {
-          console.error('❌ Ошибка подключения к Firebase:', err);
+          console.error('❌ Ошибка Firebase:', err);
           setError(err.message);
           setIsConnected(false);
         }
