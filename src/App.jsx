@@ -306,15 +306,24 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
   // Группируем транзакции по месяцам
   const monthlyData = {};
   
-  transactions.forEach(transaction => {
-    if (transaction.type === 'expense') {
-      const month = transaction.date.toLocaleDateString('ru-RU', { 
-        year: 'numeric', 
-        month: 'long' 
-      });
-      monthlyData[month] = (monthlyData[month] || 0) + transaction.amount;
-    }
-  });
+  if (Array.isArray(transactions)) {
+    transactions.forEach(transaction => {
+      if (transaction.type === 'expense' && transaction.date && transaction.amount) {
+        try {
+          const transactionDate = new Date(transaction.date);
+          if (!isNaN(transactionDate.getTime())) {
+            const month = transactionDate.toLocaleDateString('ru-RU', { 
+              year: 'numeric', 
+              month: 'long' 
+            });
+            monthlyData[month] = (monthlyData[month] || 0) + (transaction.amount || 0);
+          }
+        } catch (error) {
+          console.warn('Ошибка обработки даты транзакции:', transaction.date);
+        }
+      }
+    });
+  }
 
   const chartData = Object.entries(monthlyData)
     .map(([month, amount]) => ({ name: month, value: amount }))
@@ -350,7 +359,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.6 - FIXED transactions tab errors!');
+  console.log('🚀 Budget App v2.2.7 - FIXED analytics tab errors!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -1096,9 +1105,8 @@ function App() {
   // Получение данных для аналитики
   const getAnalyticsData = () => {
     const expensesByCategory = categories.map(category => {
-      const spent = transactions
-        .filter(t => t.category === category.name && t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
+      const spent = safeFilterTransactions(transactions, t => t.category === category.name && t.type === 'expense')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
       return {
         name: category.name,
         value: spent,
@@ -1109,12 +1117,12 @@ function App() {
     const incomeByUser = [
       { 
         name: 'Артур', 
-        value: Array.isArray(transactions) ? transactions.filter(t => t.user === 'arthur' && t.type === 'income').reduce((sum, t) => sum + t.amount, 0) : 0, 
+        value: safeFilterTransactions(transactions, t => t.user === 'arthur' && t.type === 'income').reduce((sum, t) => sum + (t.amount || 0), 0), 
         color: '#8b5cf6' 
       },
       { 
         name: 'Валерия', 
-        value: Array.isArray(transactions) ? transactions.filter(t => t.user === 'valeria' && t.type === 'income').reduce((sum, t) => sum + t.amount, 0) : 0, 
+        value: safeFilterTransactions(transactions, t => t.user === 'valeria' && t.type === 'income').reduce((sum, t) => sum + (t.amount || 0), 0), 
         color: '#ec4899' 
       }
     ].filter(item => item.value > 0);
@@ -1291,10 +1299,10 @@ function App() {
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {Object.entries(exchangeRates).map(([currency, rate]) => (
+                  {Object.entries(exchangeRates || {}).map(([currency, rate]) => (
                     <div key={currency} className="flex justify-between text-gray-300">
                       <span>1 {currency}</span>
-                      <span>{rate.toFixed(4)} PLN</span>
+                      <span>{(rate || 0).toFixed(4)} PLN</span>
                     </div>
                   ))}
                 </div>
@@ -1329,10 +1337,15 @@ function App() {
                   <div className="flex justify-between">
                     <span className="text-gray-300">Средний расход/день:</span>
                     <span className="text-yellow-400 font-bold">
-                      {formatCurrency(
-                        transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) / 
-                        Math.max(1, Math.ceil((new Date() - new Date(Math.min(...transactions.map(t => t.date)))) / (1000 * 60 * 60 * 24)))
-                      )}
+                      {(() => {
+                        const expenseTransactions = safeFilterTransactions(transactions, t => t.type === 'expense');
+                        const totalExpense = expenseTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+                        const validDates = expenseTransactions.map(t => t.date).filter(date => date);
+                        const daysDiff = validDates.length > 0 
+                          ? Math.max(1, Math.ceil((new Date() - new Date(Math.min(...validDates.map(d => new Date(d))))) / (1000 * 60 * 60 * 24)))
+                          : 1;
+                        return formatCurrency(totalExpense / daysDiff);
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -1369,10 +1382,16 @@ function App() {
                 <h4 className="text-lg font-semibold text-white mb-4">🔮 Прогнозы</h4>
                 <div className="space-y-4">
                   {(() => {
-                    const monthlyExpenses = transactions
-                      .filter(t => t.type === 'expense')
-                      .reduce((sum, t) => sum + t.amount, 0) / Math.max(1, new Set(transactions.map(t => `${t.date.getFullYear()}-${t.date.getMonth()}`)).size);
-                    const totalBalance = Object.values(balances).reduce((sum, balance) => sum + balance, 0);
+                    const expenseTransactions = safeFilterTransactions(transactions, t => t.type === 'expense');
+                    const totalExpenses = expenseTransactions.reduce((sum, t) => sum + (t.amount || 0), 0);
+                    const validDates = expenseTransactions
+                      .map(t => t.date)
+                      .filter(date => date)
+                      .map(date => new Date(date))
+                      .filter(date => !isNaN(date.getTime()));
+                    const uniqueMonths = new Set(validDates.map(date => `${date.getFullYear()}-${date.getMonth()}`));
+                    const monthlyExpenses = totalExpenses / Math.max(1, uniqueMonths.size);
+                    const totalBalance = Object.values(balances || {}).reduce((sum, balance) => sum + (balance || 0), 0);
                     const monthsLeft = totalBalance / Math.max(monthlyExpenses, 1);
                     
                     return (
