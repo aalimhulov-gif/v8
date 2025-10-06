@@ -350,7 +350,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.0 - Real-time Firebase Sync загружен!');
+  console.log('🚀 Budget App v2.2.1 - DEBUG Firebase Sync загружен!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -470,8 +470,16 @@ function App() {
   const [familyCode, setFamilyCode] = useState(() => loadFromLocalStorage('familyCode', null));
   const [isConnectedToFamily, setIsConnectedToFamily] = useState(() => loadFromLocalStorage('isConnectedToFamily', false));
   const [userName, setUserName] = useState(() => loadFromLocalStorage('userName', ''));
-  const [familyId, setFamilyId] = useState(() => loadFromLocalStorage('familyId', null));
-  const [syncMode, setSyncMode] = useState(() => loadFromLocalStorage('syncMode', 'local'));
+  const [familyId, setFamilyId] = useState(() => {
+    const id = loadFromLocalStorage('familyId', null);
+    console.log('🔍 Инициализация familyId:', id);
+    return id;
+  });
+  const [syncMode, setSyncMode] = useState(() => {
+    const mode = loadFromLocalStorage('syncMode', 'local');
+    console.log('🔍 Инициализация syncMode:', mode);
+    return mode;
+  });
 
   const [selectedCurrency, setSelectedCurrency] = useState('PLN');
 
@@ -501,10 +509,12 @@ function App() {
   }, [exchangeRates]);
 
   useEffect(() => {
+    console.log('📝 familyId изменился:', familyId);
     saveToLocalStorage('familyId', familyId);
   }, [familyId]);
 
   useEffect(() => {
+    console.log('📝 syncMode изменился:', syncMode);
     saveToLocalStorage('syncMode', syncMode);
   }, [syncMode]);
 
@@ -533,7 +543,19 @@ function App() {
 
   // Firebase подписки для синхронизации данных
   useEffect(() => {
-    if (!familyId || syncMode !== 'cloud') return;
+    console.log('🔍 Проверка условий Firebase подписок:', {
+      familyId: familyId,
+      syncMode: syncMode,
+      condition: !familyId || syncMode !== 'cloud',
+      shouldReturn: !familyId || syncMode !== 'cloud'
+    });
+    
+    if (!familyId || syncMode !== 'cloud') {
+      console.log('❌ Firebase подписки НЕ активированы:', { familyId, syncMode });
+      return;
+    }
+    
+    console.log('✅ Активируем Firebase подписки для familyId:', familyId);
 
     const unsubscribeTransactions = subscribeToTransactions(familyId, (result) => {
       console.log('Получены новые транзакции из Firebase:', result);
