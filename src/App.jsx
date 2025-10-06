@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import SyncModeSelector from './components/SyncModeSelector.jsx';
+import { useFirebase } from './hooks/useFirebase.js';
 // import { 
 //   createFamily as createFamilyFirestore, 
 //   joinFamily as joinFamilyFirestore,
@@ -345,6 +346,9 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 
 // Главный компонент приложения
 function App() {
+  // Firebase hook для проверки подключения
+  const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
+  
   // Функции для работы с localStorage
   const saveToLocalStorage = (key, data) => {
     try {

@@ -45,11 +45,26 @@ export const useFirebase = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    console.log('🔥 useFirebase: FIREBASE_ENABLED =', FIREBASE_ENABLED);
+    
     if (FIREBASE_ENABLED) {
-      // Здесь будет проверка подключения к Firebase
-      setIsConnected(true);
+      // Проверяем подключение к Firebase
+      const testFirebase = async () => {
+        try {
+          await import('../firebase-service.js');
+          console.log('✅ Firebase сервисы загружены успешно');
+          setIsConnected(true);
+          setError(null);
+        } catch (err) {
+          console.error('❌ Ошибка загрузки Firebase:', err);
+          setError(err.message);
+          setIsConnected(false);
+        }
+      };
+      
+      testFirebase();
     } else {
-      console.log('Firebase отключен - используется локальный режим');
+      console.log('📱 Firebase отключен - используется локальный режим');
       setIsConnected(false);
     }
   }, []);

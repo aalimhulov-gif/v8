@@ -1,8 +1,10 @@
 // Компонент для управления режимом синхронизации
 import { useState } from 'react';
+import { useFirebase } from '../hooks/useFirebase.js';
 
 const SyncModeSelector = ({ onModeChange, currentMode = 'local' }) => {
   const [mode, setMode] = useState(currentMode);
+  const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
 
   const handleModeChange = (newMode) => {
     setMode(newMode);
@@ -56,11 +58,27 @@ const SyncModeSelector = ({ onModeChange, currentMode = 'local' }) => {
       </div>
 
       {mode === 'firebase' && (
-        <div className="mt-3 p-3 bg-yellow-600/20 rounded-lg">
-          <div className="text-xs text-yellow-300">
-            ⚠️ Требуется настройка Firebase. 
-            <br />
-            См. файл FIREBASE_SETUP.md для инструкций.
+        <div className={`mt-3 p-3 rounded-lg ${
+          firebaseEnabled && firebaseConnected 
+            ? 'bg-green-600/20' 
+            : firebaseError 
+            ? 'bg-red-600/20' 
+            : 'bg-yellow-600/20'
+        }`}>
+          <div className={`text-xs ${
+            firebaseEnabled && firebaseConnected 
+              ? 'text-green-300' 
+              : firebaseError 
+              ? 'text-red-300' 
+              : 'text-yellow-300'
+          }`}>
+            {firebaseEnabled && firebaseConnected ? (
+              <>✅ Firebase подключен и готов к работе!</>
+            ) : firebaseError ? (
+              <>❌ Ошибка Firebase: {firebaseError}</>
+            ) : (
+              <>⚠️ Требуется настройка Firebase. См. файл FIREBASE_SETUP.md для инструкций.</>
+            )}
           </div>
         </div>
       )}
