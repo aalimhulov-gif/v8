@@ -369,7 +369,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.9 - FIXED Firebase ID sync and date display!');
+  console.log('🚀 Budget App v2.2.10 - ENHANCED delete debugging and Firebase-first approach!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -1038,54 +1038,72 @@ function App() {
   };
 
   const deleteTransaction = async (transactionId) => {
+    console.log('🗑️ Начинаем удаление транзакции:', { transactionId, familyId, syncMode });
+    
     const transaction = transactions.find(t => t.id === transactionId);
-    if (!transaction) return;
+    if (!transaction) {
+      console.error('❌ Транзакция не найдена:', transactionId);
+      return;
+    }
+    
+    console.log('� Найдена транзакция для удаления:', transaction);
     
     // Подтверждение удаления
     if (!confirm(`Удалить операцию "${transaction.description}" на сумму ${transaction.amount || 0} zł?`)) {
       return;
     }
 
-    console.log('🗑️ Удаление транзакции:', { transactionId, familyId, syncMode });
+    console.log('✅ Пользователь подтвердил удаление');
     
-    // Обновляем баланс локально (возвращаем деньги)
-    const newBalance = transaction.type === 'income' 
-      ? balances[transaction.user] - (transaction.amount || 0)
-      : balances[transaction.user] + (transaction.amount || 0);
-    
-    setBalances(prev => ({
-      ...prev,
-      [transaction.user]: newBalance
-    }));
-    
-    // Удаляем операцию локально
-    setTransactions(prev => prev.filter(t => t.id !== transactionId));
-    
-    // Если семья подключена, удаляем из Firebase
+    // Сначала удаляем из Firebase, чтобы избежать конфликтов с подпиской
     if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
       try {
         console.log('🔥 Удаляем транзакцию из Firebase:', { familyId, transactionId });
         const result = await deleteTransactionFirestore(familyId, transactionId);
         
         if (result.success) {
-          console.log('✅ Транзакция удалена из Firebase');
+          console.log('✅ Транзакция успешно удалена из Firebase');
           
           // Обновляем баланс в Firebase
+          const newBalance = transaction.type === 'income' 
+            ? balances[transaction.user] - (transaction.amount || 0)
+            : balances[transaction.user] + (transaction.amount || 0);
+          
           const updatedBalances = {
             ...balances,
             [transaction.user]: newBalance
           };
+          
+          console.log('💰 Обновляем баланс в Firebase:', updatedBalances);
           await updateFamilyBalances(familyId, updatedBalances);
           console.log('✅ Баланс обновлён в Firebase после удаления');
+          
+          // НЕ обновляем локально - Firebase подписка сама обновит
+          showNotification('Операция удалена!', 'success');
         } else {
           console.error('❌ Ошибка удаления из Firebase:', result.error);
+          showNotification('Ошибка удаления операции!', 'error');
         }
       } catch (error) {
-        console.error('❌ Ошибка удаления транзакции из Firebase:', error);
+        console.error('❌ Исключение при удалении транзакции из Firebase:', error);
+        showNotification('Ошибка удаления операции!', 'error');
       }
+    } else {
+      console.log('💾 Удаляем локально (Firebase не активен)');
+      // Обновляем баланс локально (возвращаем деньги)
+      const newBalance = transaction.type === 'income' 
+        ? balances[transaction.user] - (transaction.amount || 0)
+        : balances[transaction.user] + (transaction.amount || 0);
+      
+      setBalances(prev => ({
+        ...prev,
+        [transaction.user]: newBalance
+      }));
+      
+      // Удаляем операцию локально
+      setTransactions(prev => prev.filter(t => t.id !== transactionId));
+      showNotification('Операция удалена!', 'success');
     }
-    
-    showNotification('Операция удалена!', 'success');
   };
 
   const addGoal = (formData) => {
