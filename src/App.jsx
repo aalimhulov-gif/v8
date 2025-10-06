@@ -10,6 +10,7 @@ import {
   subscribeToTransactions,
   subscribeToGoals,
   addTransaction as addTransactionFirestore,
+  deleteTransaction as deleteTransactionFirestore,
   updateGoal,
   updateFamilyBalances
 } from './firebase-service.js';
@@ -359,7 +360,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.7 - FIXED analytics tab errors!');
+  console.log('🚀 Budget App v2.2.8 - FIXED delete transaction sync with Firebase!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -1019,30 +1020,54 @@ function App() {
     setSelectedUser('');
   };
 
-  const deleteTransaction = (transactionId) => {
+  const deleteTransaction = async (transactionId) => {
     const transaction = transactions.find(t => t.id === transactionId);
     if (!transaction) return;
     
     // Подтверждение удаления
-    if (!confirm(`Удалить операцию "${transaction.description}" на сумму ${transaction.amount} zł?`)) {
+    if (!confirm(`Удалить операцию "${transaction.description}" на сумму ${transaction.amount || 0} zł?`)) {
       return;
     }
+
+    console.log('🗑️ Удаление транзакции:', { transactionId, familyId, syncMode });
     
-    // Обновляем баланс (возвращаем деньги)
-    if (transaction.type === 'income') {
-      setBalances(prev => ({
-        ...prev,
-        [transaction.user]: prev[transaction.user] - transaction.amount
-      }));
-    } else {
-      setBalances(prev => ({
-        ...prev,
-        [transaction.user]: prev[transaction.user] + transaction.amount
-      }));
+    // Обновляем баланс локально (возвращаем деньги)
+    const newBalance = transaction.type === 'income' 
+      ? balances[transaction.user] - (transaction.amount || 0)
+      : balances[transaction.user] + (transaction.amount || 0);
+    
+    setBalances(prev => ({
+      ...prev,
+      [transaction.user]: newBalance
+    }));
+    
+    // Удаляем операцию локально
+    setTransactions(prev => prev.filter(t => t.id !== transactionId));
+    
+    // Если семья подключена, удаляем из Firebase
+    if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
+      try {
+        console.log('🔥 Удаляем транзакцию из Firebase:', { familyId, transactionId });
+        const result = await deleteTransactionFirestore(familyId, transactionId);
+        
+        if (result.success) {
+          console.log('✅ Транзакция удалена из Firebase');
+          
+          // Обновляем баланс в Firebase
+          const updatedBalances = {
+            ...balances,
+            [transaction.user]: newBalance
+          };
+          await updateFamilyBalances(familyId, updatedBalances);
+          console.log('✅ Баланс обновлён в Firebase после удаления');
+        } else {
+          console.error('❌ Ошибка удаления из Firebase:', result.error);
+        }
+      } catch (error) {
+        console.error('❌ Ошибка удаления транзакции из Firebase:', error);
+      }
     }
     
-    // Удаляем операцию
-    setTransactions(prev => prev.filter(t => t.id !== transactionId));
     showNotification('Операция удалена!', 'success');
   };
 
