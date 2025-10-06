@@ -88,14 +88,14 @@ const BalanceCard = ({ user, balance, color, icon, onEdit, transactions = [], fo
         <span className="text-2xl">{icon}</span>
       </div>
       <div className="text-3xl font-bold text-white mb-2">
-        {formatCurrency ? formatCurrency(balance) : `${balance.toLocaleString('ru-RU')} zł`}
+        {formatCurrency ? formatCurrency(balance || 0) : `${(balance || 0).toLocaleString('ru-RU')} zł`}
       </div>
       <div className="text-sm text-gray-300 mb-2">
         Доступно для трат
       </div>
       <div className="flex justify-between text-xs text-gray-400">
-        <span className="text-green-400">+{formatCurrency ? formatCurrency(income) : `${income.toLocaleString('ru-RU')} zł`}</span>
-        <span className="text-red-400">-{formatCurrency ? formatCurrency(expenses) : `${expenses.toLocaleString('ru-RU')} zł`}</span>
+        <span className="text-green-400">+{formatCurrency ? formatCurrency(income || 0) : `${(income || 0).toLocaleString('ru-RU')} zł`}</span>
+        <span className="text-red-400">-{formatCurrency ? formatCurrency(expenses || 0) : `${(expenses || 0).toLocaleString('ru-RU')} zł`}</span>
       </div>
     </div>
   );
@@ -218,8 +218,8 @@ const GoalCard = ({ goal, onEdit, onDelete, onAddMoney, formatCurrency }) => {
         </div>
       </div>
       <div className="flex justify-between text-sm text-gray-300 mb-2">
-        <span>{formatCurrency ? formatCurrency(goal.current) : `${goal.current.toLocaleString('ru-RU')} zł`}</span>
-        <span>{formatCurrency ? formatCurrency(goal.target) : `${goal.target.toLocaleString('ru-RU')} zł`}</span>
+        <span>{formatCurrency ? formatCurrency(goal.current || 0) : `${(goal.current || 0).toLocaleString('ru-RU')} zł`}</span>
+        <span>{formatCurrency ? formatCurrency(goal.target || 0) : `${(goal.target || 0).toLocaleString('ru-RU')} zł`}</span>
       </div>
       <div className="w-full bg-gray-700 rounded-full h-3 mb-2">
         <div 
@@ -232,7 +232,7 @@ const GoalCard = ({ goal, onEdit, onDelete, onAddMoney, formatCurrency }) => {
       </div>
       <div className="flex justify-between items-center text-xs text-gray-400">
         <span>{progress.toFixed(0)}% завершено</span>
-        <span>Осталось: {(goal.target - goal.current).toLocaleString('ru-RU')} zł</span>
+        <span>Осталось: {((goal.target || 0) - (goal.current || 0)).toLocaleString('ru-RU')} zł</span>
       </div>
     </div>
   );
@@ -289,7 +289,7 @@ const PieChart = ({ data, title, formatCurrency }) => {
               </div>
               <div className="text-right">
                 <div className="text-white font-medium">
-                  {formatCurrency ? formatCurrency(item.value) : `${item.value.toLocaleString('ru-RU')} zł`}
+                  {formatCurrency ? formatCurrency(item.value || 0) : `${(item.value || 0).toLocaleString('ru-RU')} zł`}
                 </div>
                 <div className="text-xs text-gray-400">{percentage.toFixed(1)}%</div>
               </div>
@@ -337,7 +337,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
                 }}
               />
               <span className="absolute right-2 top-0 h-4 flex items-center text-xs text-white font-medium">
-                {formatCurrency ? formatCurrency(item.value) : `${item.value.toLocaleString('ru-RU')} zł`}
+                {formatCurrency ? formatCurrency(item.value || 0) : `${(item.value || 0).toLocaleString('ru-RU')} zł`}
               </span>
             </div>
           </div>
@@ -350,7 +350,7 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.1 - DEBUG Firebase Sync загружен!');
+  console.log('🚀 Budget App v2.2.5 - FIXED toLocaleString errors!');
   
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
@@ -1234,7 +1234,7 @@ function App() {
                       <h4 className="text-lg font-semibold text-white">{category.name}</h4>
                       <div className="flex items-center gap-3">
                         <span className="text-sm text-gray-300">
-                          {spent.toLocaleString('ru-RU')} / {category.limit > 0 ? category.limit.toLocaleString('ru-RU') : '∞'} zł
+                          {(spent || 0).toLocaleString('ru-RU')} / {(category.limit || 0) > 0 ? (category.limit || 0).toLocaleString('ru-RU') : '∞'} zł
                         </span>
                         <button
                           onClick={() => {setEditingItem(category); setModalType('editLimit'); setModalOpen(true);}}
@@ -1852,7 +1852,7 @@ function App() {
               <div>
                 <label className="block text-white mb-2">Цель: {editingItem.title}</label>
                 <div className="text-sm text-gray-400">
-                  Текущий прогресс: {editingItem.current.toLocaleString('ru-RU')} / {editingItem.target.toLocaleString('ru-RU')} zł
+                  Текущий прогресс: {(editingItem.current || 0).toLocaleString('ru-RU')} / {(editingItem.target || 0).toLocaleString('ru-RU')} zł
                 </div>
               </div>
               <div>
@@ -1886,7 +1886,7 @@ function App() {
               <div>
                 <label className="block text-white mb-2">Категория: {editingItem.name}</label>
                 <div className="text-sm text-gray-400">
-                  Текущий лимит: {editingItem.limit > 0 ? editingItem.limit.toLocaleString('ru-RU') : '∞'} zł
+                  Текущий лимит: {(editingItem.limit || 0) > 0 ? (editingItem.limit || 0).toLocaleString('ru-RU') : '∞'} zł
                 </div>
               </div>
               <div>
