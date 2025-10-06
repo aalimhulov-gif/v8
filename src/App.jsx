@@ -71,8 +71,8 @@ const Notification = ({ message, type, onClose }) => {
 
 // Компонент для карточки баланса
 const BalanceCard = ({ user, balance, color, icon, onEdit, transactions = [], formatCurrency }) => {
-  const income = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
-  const expenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+  const income = Array.isArray(transactions) ? transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0) : 0;
+  const expenses = Array.isArray(transactions) ? transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0) : 0;
   
   return (
     <div 
@@ -352,6 +352,11 @@ function App() {
   // Firebase hook для проверки подключения
   const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
   
+  // Безопасная функция для фильтрации транзакций
+  const safeFilterTransactions = (transactions, filterFn) => {
+    return Array.isArray(transactions) ? transactions.filter(filterFn) : [];
+  };
+  
   // Функции для работы с localStorage
   const saveToLocalStorage = (key, data) => {
     try {
@@ -529,7 +534,13 @@ function App() {
 
     const unsubscribeTransactions = subscribeToTransactions(familyId, (newTransactions) => {
       console.log('Получены новые транзакции из Firebase:', newTransactions);
-      setTransactions(newTransactions);
+      // Проверяем что newTransactions является массивом
+      if (Array.isArray(newTransactions)) {
+        setTransactions(newTransactions);
+      } else {
+        console.warn('Транзакции из Firebase не являются массивом:', newTransactions);
+        setTransactions([]);
+      }
     });
 
     const unsubscribeGoals = subscribeToGoals(familyId, (newGoals) => {
@@ -878,7 +889,7 @@ function App() {
     shared: { balance: balances.shared, color: '#f59e0b', icon: '🧡' }
   };
 
-  const getUserTransactions = (user) => transactions.filter(t => t.user === user);
+  const getUserTransactions = (user) => Array.isArray(transactions) ? transactions.filter(t => t.user === user) : [];
 
   // Функции для работы с данными
   const addTransaction = async (formData) => {
@@ -1042,12 +1053,12 @@ function App() {
     const incomeByUser = [
       { 
         name: 'Артур', 
-        value: transactions.filter(t => t.user === 'arthur' && t.type === 'income').reduce((sum, t) => sum + t.amount, 0), 
+        value: Array.isArray(transactions) ? transactions.filter(t => t.user === 'arthur' && t.type === 'income').reduce((sum, t) => sum + t.amount, 0) : 0, 
         color: '#8b5cf6' 
       },
       { 
         name: 'Валерия', 
-        value: transactions.filter(t => t.user === 'valeria' && t.type === 'income').reduce((sum, t) => sum + t.amount, 0), 
+        value: Array.isArray(transactions) ? transactions.filter(t => t.user === 'valeria' && t.type === 'income').reduce((sum, t) => sum + t.amount, 0) : 0, 
         color: '#ec4899' 
       }
     ].filter(item => item.value > 0);
