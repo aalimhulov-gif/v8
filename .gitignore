@@ -12,8 +12,8 @@ dist
 dist-ssr
 *.local
 
-# Firebase config (содержит приватные ключи)
-src/firebase/config.js
+# Firebase config (содержит приватные ключи) - временно закомментировано
+# src/firebase/config.js
 
 # Editor directories and files
 .vscode/*
