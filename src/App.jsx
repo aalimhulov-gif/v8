@@ -1,8 +1,6 @@
 // Полнофункциональный сайт для совместного бюджета Артура и Валерии
 
 import { useState, useEffect, useCallback } from 'react';
-import SyncModeSelector from './components/SyncModeSelector.jsx';
-import { useFirebase } from './hooks/useFirebase.js';
 import { 
   createFamily as createFamilyFirestore, 
   joinFamily as joinFamilyFirestore,
@@ -11,7 +9,6 @@ import {
   subscribeToGoals,
   addTransaction as addTransactionFirestore,
   deleteTransaction as deleteTransactionFirestore,
-  updateGoal,
   updateFamilyBalances
 } from './firebase-service.js';
 
@@ -369,173 +366,56 @@ const TrendChart = ({ transactions, formatCurrency, title = "Тенденции 
 // Главный компонент приложения
 function App() {
   // Проверка версии приложения
-  console.log('🚀 Budget App v2.2.11 - ADDED button click debugging!');
-  
-  // Firebase hook для проверки подключения
-  const { isConnected: firebaseConnected, error: firebaseError, isEnabled: firebaseEnabled } = useFirebase();
+  console.log('🚀 Budget App v2.3.0 - PURE FIREBASE ONLY!');
   
   // Безопасная функция для фильтрации транзакций
   const safeFilterTransactions = (transactions, filterFn) => {
     return Array.isArray(transactions) ? transactions.filter(filterFn) : [];
   };
-  
-  // Функции для работы с localStorage
-  const saveToLocalStorage = (key, data) => {
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error('Ошибка сохранения в localStorage:', error);
-    }
-  };
-
-  const loadFromLocalStorage = (key, defaultValue) => {
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Восстанавливаем даты для транзакций
-        if (key === 'familyBudget_transactions' && Array.isArray(parsed)) {
-          return parsed.map(t => ({
-            ...t,
-            date: new Date(t.date)
-          }));
-        }
-        return parsed;
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки из localStorage:', error);
-    }
-    return defaultValue;
-  };
 
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [theme, setTheme] = useState(() => loadFromLocalStorage('familyBudget_theme', 'dark'));
+  const [theme, setTheme] = useState('dark');
   const [notification, setNotification] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalType, setModalType] = useState('');
   const [editingItem, setEditingItem] = useState(null);
   const [selectedUser, setSelectedUser] = useState('');
 
-  // Состояние данных с загрузкой из localStorage
-  const [balances, setBalances] = useState(() => 
-    loadFromLocalStorage('familyBudget_balances', {
-      arthur: 2450,
-      valeria: 1890,
-      shared: 5670
-    })
-  );
+  // Firebase-only состояние данных
+  const [balances, setBalances] = useState({
+    arthur: 0,
+    valeria: 0,
+    shared: 0
+  });
 
-  const [transactions, setTransactions] = useState(() =>
-    loadFromLocalStorage('familyBudget_transactions', [
-      { id: 1, user: 'arthur', type: 'income', amount: 3000, description: 'Зарплата', category: 'Работа', date: new Date() },
-      { id: 2, user: 'valeria', type: 'income', amount: 2500, description: 'Зарплата', category: 'Работа', date: new Date() },
-      { id: 3, user: 'shared', type: 'expense', amount: 890, description: 'Продукты', category: 'Продукты', date: new Date() },
-      { id: 4, user: 'arthur', type: 'expense', amount: 320, description: 'Метро', category: 'Транспорт', date: new Date() },
-      { id: 5, user: 'valeria', type: 'expense', amount: 280, description: 'Кино', category: 'Развлечения', date: new Date() }
-    ])
-  );
+  const [transactions, setTransactions] = useState([]);
+  const [goals, setGoals] = useState([]);
+  const [categories, setCategories] = useState([
+    { id: 1, name: 'Продукты', limit: 1200, color: '#ef4444' },
+    { id: 2, name: 'Транспорт', limit: 500, color: '#3b82f6' },
+    { id: 3, name: 'Развлечения', limit: 600, color: '#8b5cf6' },
+    { id: 4, name: 'Коммунальные', limit: 600, color: '#f59e0b' },
+    { id: 5, name: 'Работа', limit: 0, color: '#10b981' }
+  ]);
 
-  const [goals, setGoals] = useState(() =>
-    loadFromLocalStorage('familyBudget_goals', [
-      { 
-        id: 1, 
-        title: 'Отпуск в Италию', 
-        current: 3200, 
-        target: 8000, 
-        color: '#10b981',
-        deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 3 месяца
-      },
-      { 
-        id: 2, 
-        title: 'Новый ноутбук', 
-        current: 1500, 
-        target: 4000, 
-        color: '#3b82f6',
-        deadline: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 2 месяца
-      },
-      { 
-        id: 3, 
-        title: 'Ремонт кухни', 
-        current: 850, 
-        target: 15000, 
-        color: '#f59e0b',
-        deadline: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // 1 год
-      }
-    ])
-  );
-
-  const [categories, setCategories] = useState(() =>
-    loadFromLocalStorage('familyBudget_categories', [
-      { id: 1, name: 'Продукты', limit: 1200, color: '#ef4444' },
-      { id: 2, name: 'Транспорт', limit: 500, color: '#3b82f6' },
-      { id: 3, name: 'Развлечения', limit: 600, color: '#8b5cf6' },
-      { id: 4, name: 'Коммунальные', limit: 600, color: '#f59e0b' },
-      { id: 5, name: 'Работа', limit: 0, color: '#10b981' }
-    ])
-  );
-
-  const [exchangeRates, setExchangeRates] = useState(() =>
-    loadFromLocalStorage('familyBudget_exchangeRates', {
-      EUR: 4.65,
-      USD: 4.28,
-      UAH: 0.103,
-      PLN: 1.00
-    })
-  );
+  const [exchangeRates, setExchangeRates] = useState({
+    EUR: 4.65,
+    USD: 4.28,
+    UAH: 0.103,
+    PLN: 1.00
+  });
   const [lastRateUpdate, setLastRateUpdate] = useState(null);
   const [isLoadingRates, setIsLoadingRates] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
-  const [familyCode, setFamilyCode] = useState(() => loadFromLocalStorage('familyCode', null));
-  const [isConnectedToFamily, setIsConnectedToFamily] = useState(() => loadFromLocalStorage('isConnectedToFamily', false));
-  const [userName, setUserName] = useState(() => loadFromLocalStorage('userName', ''));
-  const [familyId, setFamilyId] = useState(() => {
-    const id = loadFromLocalStorage('familyId', null);
-    console.log('🔍 Инициализация familyId:', id);
-    return id;
-  });
-  const [syncMode, setSyncMode] = useState(() => {
-    const mode = loadFromLocalStorage('syncMode', 'local');
-    console.log('🔍 Инициализация syncMode:', mode);
-    return mode;
-  });
+  
+  // Firebase семейное подключение
+  const [familyCode, setFamilyCode] = useState(null);
+  const [isConnectedToFamily, setIsConnectedToFamily] = useState(false);
+  const [userName, setUserName] = useState('');
+  const [familyId, setFamilyId] = useState(null);
 
   const [selectedCurrency, setSelectedCurrency] = useState('PLN');
-
-  // Автоматическое сохранение данных в localStorage
-  useEffect(() => {
-    saveToLocalStorage('familyBudget_theme', theme);
-  }, [theme]);
-
-  useEffect(() => {
-    saveToLocalStorage('familyBudget_balances', balances);
-  }, [balances]);
-
-  useEffect(() => {
-    saveToLocalStorage('familyBudget_transactions', transactions);
-  }, [transactions]);
-
-  useEffect(() => {
-    saveToLocalStorage('familyBudget_goals', goals);
-  }, [goals]);
-
-  useEffect(() => {
-    saveToLocalStorage('familyBudget_categories', categories);
-  }, [categories]);
-
-  useEffect(() => {
-    saveToLocalStorage('familyBudget_exchangeRates', exchangeRates);
-  }, [exchangeRates]);
-
-  useEffect(() => {
-    console.log('📝 familyId изменился:', familyId);
-    saveToLocalStorage('familyId', familyId);
-  }, [familyId]);
-
-  useEffect(() => {
-    console.log('📝 syncMode изменился:', syncMode);
-    saveToLocalStorage('syncMode', syncMode);
-  }, [syncMode]);
 
   // PWA установка
   useEffect(() => {
@@ -562,22 +442,16 @@ function App() {
 
   // Firebase подписки для синхронизации данных
   useEffect(() => {
-    console.log('🔍 Проверка условий Firebase подписок:', {
-      familyId: familyId,
-      syncMode: syncMode,
-      condition: !familyId || (syncMode !== 'cloud' && syncMode !== 'firebase'),
-      shouldReturn: !familyId || (syncMode !== 'cloud' && syncMode !== 'firebase')
-    });
+    console.log('🔍 Проверка условий Firebase подписок:', { familyId });
     
-    if (!familyId || (syncMode !== 'cloud' && syncMode !== 'firebase')) {
-      console.log('❌ Firebase подписки НЕ активированы:', { familyId, syncMode });
+    if (!familyId) {
+      console.log('❌ Firebase подписки НЕ активированы: нет familyId');
       return;
     }
     
     console.log('✅ Активируем Firebase подписки для familyId:', familyId);
     
-    // При включении Firebase режима очищаем локальные данные
-    // чтобы избежать конфликта ID между локальными и Firebase данными
+    // Очищаем данные перед Firebase синхронизацией
     console.log('🧹 Очищаем локальные данные перед Firebase синхронизацией');
     setTransactions([]);
     setGoals([]);
@@ -587,7 +461,6 @@ function App() {
       console.log('📊 Количество транзакций в результате:', result.transactions?.length || 0);
       console.log('📋 Список ID транзакций:', result.transactions?.map(t => t.id) || []);
       
-      // Проверяем что result содержит транзакции
       if (result.success && Array.isArray(result.transactions)) {
         console.log('🔄 Обновляем локальное состояние транзакций');
         setTransactions(result.transactions);
@@ -627,7 +500,7 @@ function App() {
       unsubscribeGoals?.();
       unsubscribeFamilyData?.();
     };
-  }, [familyId, syncMode]);
+  }, [familyId]); // Убираем syncMode из зависимостей
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -669,13 +542,6 @@ function App() {
         setFamilyId(newFamilyCode); // Используем familyCode как ID
         setUserName(name);
         setIsConnectedToFamily(true);
-        setSyncMode('firebase');
-        
-        saveToLocalStorage('familyCode', newFamilyCode);
-        saveToLocalStorage('familyId', newFamilyCode);
-        saveToLocalStorage('userName', name);
-        saveToLocalStorage('isConnectedToFamily', true);
-        saveToLocalStorage('syncMode', 'firebase');
         
         console.log('✅ Семья создана успешно!', { familyCode: newFamilyCode, familyId: newFamilyCode, syncMode: 'firebase' });
         showNotification(`Семья создана в Firebase! Код: ${newFamilyCode}`, 'success');
@@ -684,14 +550,7 @@ function App() {
       }
     } catch (error) {
       console.error('Ошибка создания семьи в Firebase:', error);
-      // Откат к локальному режиму
-      setFamilyCode(newFamilyCode);
-      setUserName(name);
-      setIsConnectedToFamily(true);
-      saveToLocalStorage('familyCode', newFamilyCode);
-      saveToLocalStorage('userName', name);
-      saveToLocalStorage('isConnectedToFamily', true);
-      showNotification(`Семья создана локально! Код: ${newFamilyCode}`, 'warning');
+      showNotification('Ошибка создания семьи!', 'error');
     }
   };
 
@@ -706,18 +565,11 @@ function App() {
         setFamilyId(code.toUpperCase()); // Используем familyCode как ID
         setUserName(name);
         setIsConnectedToFamily(true);
-        setSyncMode('firebase');
         
         // Синхронизируем данные из Firebase
         if (result.family.balances) {
           setBalances(result.family.balances);
         }
-        
-        saveToLocalStorage('familyCode', code.toUpperCase());
-        saveToLocalStorage('familyId', code.toUpperCase());
-        saveToLocalStorage('userName', name);
-        saveToLocalStorage('isConnectedToFamily', true);
-        saveToLocalStorage('syncMode', 'firebase');
         
         showNotification(`Подключение к семье ${code.toUpperCase()} успешно!`, 'success');
       } else {
@@ -725,14 +577,7 @@ function App() {
       }
     } catch (error) {
       console.error('Ошибка подключения к семье в Firebase:', error);
-      // Откат к локальному режиму
-      setFamilyCode(code.toUpperCase());
-      setUserName(name);
-      setIsConnectedToFamily(true);
-      saveToLocalStorage('familyCode', code.toUpperCase());
-      saveToLocalStorage('userName', name);
-      saveToLocalStorage('isConnectedToFamily', true);
-      showNotification(`Подключение к семье ${code.toUpperCase()} (локально)`, 'warning');
+      showNotification('Ошибка подключения к семье!', 'error');
     }
   };
 
@@ -742,12 +587,6 @@ function App() {
     setFamilyId(null);
     setUserName('');
     setIsConnectedToFamily(false);
-    setSyncMode('local');
-    saveToLocalStorage('familyCode', null);
-    saveToLocalStorage('familyId', null);
-    saveToLocalStorage('userName', '');
-    saveToLocalStorage('isConnectedToFamily', false);
-    saveToLocalStorage('syncMode', 'local');
     showNotification('Отключен от семьи', 'success');
   };
 
@@ -974,72 +813,45 @@ function App() {
       date: new Date()
     };
     
-    // Если семья подключена, сохраняем в Firebase
-    console.log('Проверка условий Firebase:', { familyId, syncMode, condition: familyId && (syncMode === 'cloud' || syncMode === 'firebase') });
-    if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
-      try {
-        console.log('Отправляем транзакцию в Firebase:', { familyId, newTransaction });
-        const result = await addTransactionFirestore(familyId, newTransaction);
-        
-        if (result.success) {
-          console.log('✅ Транзакция сохранена в Firebase с ID:', result.id);
-          // НЕ добавляем локально - Firebase подписка сама обновит состояние с правильным ID
-        } else {
-          console.error('❌ Ошибка сохранения в Firebase:', result.error);
-          // В случае ошибки сохраняем локально
-          setTransactions(prev => [...prev, newTransaction]);
-        }
-      } catch (error) {
-        console.error('❌ Ошибка сохранения в Firebase:', error);
-        // В случае ошибки сохраняем локально
-        setTransactions(prev => [...prev, newTransaction]);
-      }
-    } else {
-      console.log('💾 Сохраняем локально (Firebase не активен)');
-      // Сохраняем локально
-      setTransactions(prev => [...prev, newTransaction]);
+    if (!familyId) {
+      showNotification('Ошибка: не подключены к семье!', 'error');
+      return;
     }
     
-    // Обновляем баланс локально (Firebase будет синхронизировать автоматически)
-    if (newTransaction.type === 'income') {
-      setBalances(prev => ({
-        ...prev,
-        [newTransaction.user]: prev[newTransaction.user] + amount
-      }));
-    } else {
-      setBalances(prev => ({
-        ...prev,
-        [newTransaction.user]: prev[newTransaction.user] - amount
-      }));
+    try {
+      console.log('Отправляем транзакцию в Firebase:', { familyId, newTransaction });
+      const result = await addTransactionFirestore(familyId, newTransaction);
+      
+      if (result.success) {
+        console.log('✅ Транзакция сохранена в Firebase с ID:', result.id);
+        // Firebase подписка автоматически обновит состояние
+      } else {
+        console.error('❌ Ошибка сохранения в Firebase:', result.error);
+        showNotification('Ошибка добавления операции!', 'error');
+        return;
+      }
+    } catch (error) {
+      console.error('❌ Ошибка сохранения в Firebase:', error);
+      showNotification('Ошибка добавления операции!', 'error');
+      return;
     }
     
-    // Если семья подключена, обновляем баланс в Firebase
-    if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
-      try {
-        const newBalance = newTransaction.type === 'income' 
-          ? balances[newTransaction.user] + amount 
-          : balances[newTransaction.user] - amount;
-        
-        const updatedBalances = {
-          ...balances,
-          [newTransaction.user]: newBalance
-        };
-        
-        console.log('💰 Обновляем баланс в Firebase:', {
-          user: newTransaction.user,
-          oldBalance: balances[newTransaction.user],
-          amount: amount,
-          type: newTransaction.type,
-          newBalance: newBalance,
-          fullBalances: updatedBalances
-        });
-        
-        const result = await updateFamilyBalances(familyId, updatedBalances);
-        
-        console.log('✅ Результат обновления баланса в Firebase:', result);
-      } catch (error) {
-        console.error('❌ Ошибка обновления баланса в Firebase:', error);
-      }
+    // Обновляем баланс в Firebase
+    const newBalance = newTransaction.type === 'income' 
+      ? balances[newTransaction.user] + amount 
+      : balances[newTransaction.user] - amount;
+    
+    const updatedBalances = {
+      ...balances,
+      [newTransaction.user]: newBalance
+    };
+    
+    try {
+      console.log('💰 Обновляем баланс в Firebase:', updatedBalances);
+      await updateFamilyBalances(familyId, updatedBalances);
+      console.log('✅ Баланс обновлён в Firebase');
+    } catch (error) {
+      console.error('❌ Ошибка обновления баланса в Firebase:', error);
     }
     
     showNotification('Операция добавлена!', 'success');
@@ -1048,7 +860,7 @@ function App() {
   };
 
   const deleteTransaction = async (transactionId) => {
-    console.log('🗑️ УДАЛЕНИЕ ТРАНЗАКЦИИ:', { transactionId, familyId, syncMode });
+    console.log('🗑️ УДАЛЕНИЕ ТРАНЗАКЦИИ:', { transactionId, familyId });
     
     const transaction = transactions.find(t => t.id === transactionId);
     if (!transaction) {
@@ -1063,55 +875,44 @@ function App() {
       return;
     }
 
-    console.log('✅ Подтверждение получено, начинаем удаление...');
+    console.log('✅ Подтверждение получено, удаляем из Firebase...');
 
-    // Firebase режим - удаляем только из Firebase, подписка обновит UI
-    if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
-      console.log('🔥 Firebase режим - удаляем из облака');
-      try {
-        console.log('📡 Вызываем deleteTransactionFirestore с параметрами:', { familyId, transactionId });
-        const result = await deleteTransactionFirestore(familyId, transactionId);
-        console.log('📋 Результат удаления из Firebase:', result);
+    if (!familyId) {
+      showNotification('Ошибка: не подключены к семье!', 'error');
+      return;
+    }
+
+    try {
+      console.log('📡 Вызываем deleteTransactionFirestore с параметрами:', { familyId, transactionId });
+      const result = await deleteTransactionFirestore(familyId, transactionId);
+      console.log('📋 Результат удаления из Firebase:', result);
+      
+      if (result.success) {
+        console.log('✅ Успешно удалено из Firebase');
+        // Обновляем баланс в Firebase
+        const newBalance = transaction.type === 'income' 
+          ? balances[transaction.user] - (transaction.amount || 0)
+          : balances[transaction.user] + (transaction.amount || 0);
         
-        if (result.success) {
-          console.log('✅ Успешно удалено из Firebase');
-          // Обновляем баланс в Firebase
-          const newBalance = transaction.type === 'income' 
-            ? balances[transaction.user] - (transaction.amount || 0)
-            : balances[transaction.user] + (transaction.amount || 0);
-          
-          const updatedBalances = {
-            ...balances,
-            [transaction.user]: newBalance
-          };
-          
-          console.log('💰 Обновляем баланс в Firebase:', updatedBalances);
-          await updateFamilyBalances(familyId, updatedBalances);
-          console.log('✅ Баланс обновлён');
-          showNotification('Операция удалена!', 'success');
-        } else {
-          console.error('❌ Firebase вернул ошибку:', result.error);
-          showNotification('Ошибка удаления операции!', 'error');
-        }
-      } catch (error) {
-        console.error('❌ Исключение при удалении:', error);
+        const updatedBalances = {
+          ...balances,
+          [transaction.user]: newBalance
+        };
+        
+        console.log('💰 Обновляем баланс в Firebase:', updatedBalances);
+        await updateFamilyBalances(familyId, updatedBalances);
+        console.log('✅ Баланс обновлён');
+        showNotification('Операция удалена!', 'success');
+      } else {
+        console.error('❌ Firebase вернул ошибку:', result.error);
         showNotification('Ошибка удаления операции!', 'error');
       }
-    } else {
-      // Локальный режим - обновляем состояние напрямую
-      const newBalance = transaction.type === 'income' 
-        ? balances[transaction.user] - (transaction.amount || 0)
-        : balances[transaction.user] + (transaction.amount || 0);
-      
-      setBalances(prev => ({
-        ...prev,
-        [transaction.user]: newBalance
-      }));
-      
-      setTransactions(prev => prev.filter(t => t.id !== transactionId));
-      showNotification('Операция удалена!', 'success');
+    } catch (error) {
+      console.error('❌ Исключение при удалении:', error);
+      showNotification('Ошибка удаления операции!', 'error');
     }
   };
+
   const addGoal = (formData) => {
     const newGoal = {
       id: Date.now(),
@@ -1574,24 +1375,16 @@ function App() {
                 </div>
 
                 <div className="pt-4 border-t border-gray-600">
-                  <SyncModeSelector 
-                    currentMode={syncMode}
-                    onModeChange={(mode) => {
-                      console.log('Режим синхронизации изменен на:', mode);
-                      setSyncMode(mode);
-                      if (mode === 'cloud') {
-                        if (firebaseConnected) {
-                          showNotification('🔥 Переключено на Firebase! Облачная синхронизация активна.', 'success');
-                        } else if (firebaseError) {
-                          showNotification(`❌ Ошибка Firebase: ${firebaseError}`, 'error');
-                        } else {
-                          showNotification('⚠️ Firebase включен, но подключение не проверено', 'warning');
-                        }
-                      } else {
-                        showNotification('📱 Переключено на локальный режим', 'success');
-                      }
-                    }}
-                  />
+                  <h4 className="text-white font-medium mb-3">🔥 Режим синхронизации</h4>
+                  <div className="bg-green-900/20 border border-green-500/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-green-400">
+                      <span>✅</span>
+                      <span>Firebase Cloud - Реальная синхронизация</span>
+                    </div>
+                    <div className="text-xs text-green-300 mt-1">
+                      Все данные автоматически синхронизируются между устройствами
+                    </div>
+                  </div>
                 </div>
 
                 {showInstallPrompt && (
