@@ -581,24 +581,28 @@ function App() {
     
     try {
       // Создаем семью в Firebase
-      const familyIdResult = await createFamilyFirestore(newFamilyCode, name, {
+      const result = await createFamilyFirestore(newFamilyCode, name, {
         balances: balances,
         categories: categories
       });
       
-      setFamilyCode(newFamilyCode);
-      setFamilyId(familyIdResult);
-      setUserName(name);
-      setIsConnectedToFamily(true);
-      setSyncMode('cloud');
-      
-      saveToLocalStorage('familyCode', newFamilyCode);
-      saveToLocalStorage('familyId', familyIdResult);
-      saveToLocalStorage('userName', name);
-      saveToLocalStorage('isConnectedToFamily', true);
-      saveToLocalStorage('syncMode', 'cloud');
-      
-      showNotification(`Семья создана! Код: ${newFamilyCode}`, 'success');
+      if (result.success) {
+        setFamilyCode(newFamilyCode);
+        setFamilyId(newFamilyCode); // Используем familyCode как ID
+        setUserName(name);
+        setIsConnectedToFamily(true);
+        setSyncMode('cloud');
+        
+        saveToLocalStorage('familyCode', newFamilyCode);
+        saveToLocalStorage('familyId', newFamilyCode);
+        saveToLocalStorage('userName', name);
+        saveToLocalStorage('isConnectedToFamily', true);
+        saveToLocalStorage('syncMode', 'cloud');
+        
+        showNotification(`Семья создана в Firebase! Код: ${newFamilyCode}`, 'success');
+      } else {
+        throw new Error(result.error);
+      }
     } catch (error) {
       console.error('Ошибка создания семьи в Firebase:', error);
       // Откат к локальному режиму
@@ -616,29 +620,30 @@ function App() {
   const joinFamily = async (code, name) => {
     try {
       // Подключаемся к семье в Firebase
-      const familyData = await joinFamilyFirestore(code.toUpperCase());
+      const result = await joinFamilyFirestore(code.toUpperCase(), name);
       
-      setFamilyCode(code.toUpperCase());
-      setFamilyId(familyData.id);
-      setUserName(name);
-      setIsConnectedToFamily(true);
-      setSyncMode('cloud');
-      
-      // Синхронизируем данные из Firebase
-      if (familyData.balances) {
-        setBalances(familyData.balances);
+      if (result.success) {
+        setFamilyCode(code.toUpperCase());
+        setFamilyId(code.toUpperCase()); // Используем familyCode как ID
+        setUserName(name);
+        setIsConnectedToFamily(true);
+        setSyncMode('cloud');
+        
+        // Синхронизируем данные из Firebase
+        if (result.family.balances) {
+          setBalances(result.family.balances);
+        }
+        
+        saveToLocalStorage('familyCode', code.toUpperCase());
+        saveToLocalStorage('familyId', code.toUpperCase());
+        saveToLocalStorage('userName', name);
+        saveToLocalStorage('isConnectedToFamily', true);
+        saveToLocalStorage('syncMode', 'cloud');
+        
+        showNotification(`Подключение к семье ${code.toUpperCase()} успешно!`, 'success');
+      } else {
+        throw new Error(result.error);
       }
-      if (familyData.categories) {
-        setCategories(familyData.categories);
-      }
-      
-      saveToLocalStorage('familyCode', code.toUpperCase());
-      saveToLocalStorage('familyId', familyData.id);
-      saveToLocalStorage('userName', name);
-      saveToLocalStorage('isConnectedToFamily', true);
-      saveToLocalStorage('syncMode', 'cloud');
-      
-      showNotification(`Подключение к семье ${code.toUpperCase()} успешно!`, 'success');
     } catch (error) {
       console.error('Ошибка подключения к семье в Firebase:', error);
       // Откат к локальному режиму
@@ -890,16 +895,19 @@ function App() {
     };
     
     // Если семья подключена, сохраняем в Firebase
+    console.log('Проверка условий Firebase:', { familyId, syncMode, condition: familyId && syncMode === 'cloud' });
     if (familyId && syncMode === 'cloud') {
       try {
+        console.log('Отправляем транзакцию в Firebase:', { familyId, newTransaction });
         await addTransactionFirestore(familyId, newTransaction);
-        console.log('Транзакция сохранена в Firebase');
+        console.log('✅ Транзакция сохранена в Firebase');
       } catch (error) {
-        console.error('Ошибка сохранения в Firebase:', error);
+        console.error('❌ Ошибка сохранения в Firebase:', error);
         // В случае ошибки сохраняем локально
         setTransactions(prev => [...prev, newTransaction]);
       }
     } else {
+      console.log('💾 Сохраняем локально (Firebase не активен)');
       // Сохраняем локально
       setTransactions(prev => [...prev, newTransaction]);
     }
