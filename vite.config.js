@@ -8,6 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: '/v8/', // Замените 'v8' на название вашего репозитория
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
