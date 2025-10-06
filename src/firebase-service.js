@@ -110,12 +110,17 @@ export const updateTransaction = async (familyCode, transactionId, updates) => {
 };
 
 export const deleteTransaction = async (familyCode, transactionId) => {
+  console.log('🔥 Firebase deleteTransaction вызвана:', { familyCode, transactionId });
   try {
     const transactionRef = doc(db, 'families', familyCode, 'transactions', transactionId);
+    console.log('📄 Документ для удаления:', transactionRef.path);
+    
     await deleteDoc(transactionRef);
+    console.log('✅ Документ успешно удален из Firebase');
+    
     return { success: true };
   } catch (error) {
-    console.error('❌ Ошибка удаления транзакции:', error);
+    console.error('❌ Ошибка удаления транзакции из Firebase:', error);
     return { success: false, error: error.message };
   }
 };
@@ -199,15 +204,22 @@ export const subscribeToFamilyData = (familyCode, callback) => {
 };
 
 export const subscribeToTransactions = (familyCode, callback) => {
+  console.log('🔔 Создаём подписку на транзакции для семьи:', familyCode);
   const transactionRef = collection(db, 'families', familyCode, 'transactions');
   const q = query(transactionRef, orderBy('createdAt', 'desc'));
   
   return onSnapshot(q, (querySnapshot) => {
+    console.log('📡 Firebase подписка сработала, размер снапшота:', querySnapshot.size);
     const transactions = [];
     
     querySnapshot.forEach((doc) => {
-      transactions.push({ id: doc.id, ...doc.data() });
+      const transaction = { id: doc.id, ...doc.data() };
+      console.log('📄 Документ транзакции:', transaction);
+      transactions.push(transaction);
     });
+    
+    console.log('📊 Итого транзакций отправляем в callback:', transactions.length);
+    console.log('🆔 ID всех транзакций:', transactions.map(t => t.id));
     
     callback({ success: true, transactions });
   }, (error) => {

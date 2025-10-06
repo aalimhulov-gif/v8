@@ -575,15 +575,25 @@ function App() {
     }
     
     console.log('✅ Активируем Firebase подписки для familyId:', familyId);
+    
+    // При включении Firebase режима очищаем локальные данные
+    // чтобы избежать конфликта ID между локальными и Firebase данными
+    console.log('🧹 Очищаем локальные данные перед Firebase синхронизацией');
+    setTransactions([]);
+    setGoals([]);
 
     const unsubscribeTransactions = subscribeToTransactions(familyId, (result) => {
-      console.log('Получены новые транзакции из Firebase:', result);
+      console.log('📡 FIREBASE ПОДПИСКА: Получены новые транзакции:', result);
+      console.log('📊 Количество транзакций в результате:', result.transactions?.length || 0);
+      console.log('📋 Список ID транзакций:', result.transactions?.map(t => t.id) || []);
+      
       // Проверяем что result содержит транзакции
       if (result.success && Array.isArray(result.transactions)) {
+        console.log('🔄 Обновляем локальное состояние транзакций');
         setTransactions(result.transactions);
-        console.log('🔄 Транзакции обновлены в реальном времени!', result.transactions.length);
+        console.log('✅ Транзакции обновлены в реальном времени!', result.transactions.length);
       } else {
-        console.warn('Транзакции из Firebase не содержат данные:', result);
+        console.warn('❌ Транзакции из Firebase не содержат данные:', result);
         setTransactions([]);
       }
     });
@@ -1038,19 +1048,33 @@ function App() {
   };
 
   const deleteTransaction = async (transactionId) => {
+    console.log('🗑️ УДАЛЕНИЕ ТРАНЗАКЦИИ:', { transactionId, familyId, syncMode });
+    
     const transaction = transactions.find(t => t.id === transactionId);
-    if (!transaction) return;
+    if (!transaction) {
+      console.error('❌ Транзакция не найдена:', transactionId);
+      return;
+    }
+    
+    console.log('📋 Найдена транзакция:', transaction);
     
     if (!confirm(`Удалить операцию "${transaction.description}" на сумму ${transaction.amount || 0} zł?`)) {
+      console.log('❌ Пользователь отменил удаление');
       return;
     }
 
+    console.log('✅ Подтверждение получено, начинаем удаление...');
+
     // Firebase режим - удаляем только из Firebase, подписка обновит UI
     if (familyId && (syncMode === 'cloud' || syncMode === 'firebase')) {
+      console.log('🔥 Firebase режим - удаляем из облака');
       try {
+        console.log('📡 Вызываем deleteTransactionFirestore с параметрами:', { familyId, transactionId });
         const result = await deleteTransactionFirestore(familyId, transactionId);
+        console.log('📋 Результат удаления из Firebase:', result);
         
         if (result.success) {
+          console.log('✅ Успешно удалено из Firebase');
           // Обновляем баланс в Firebase
           const newBalance = transaction.type === 'income' 
             ? balances[transaction.user] - (transaction.amount || 0)
@@ -1061,13 +1085,16 @@ function App() {
             [transaction.user]: newBalance
           };
           
+          console.log('💰 Обновляем баланс в Firebase:', updatedBalances);
           await updateFamilyBalances(familyId, updatedBalances);
+          console.log('✅ Баланс обновлён');
           showNotification('Операция удалена!', 'success');
         } else {
+          console.error('❌ Firebase вернул ошибку:', result.error);
           showNotification('Ошибка удаления операции!', 'error');
         }
       } catch (error) {
-        console.error('Ошибка удаления транзакции:', error);
+        console.error('❌ Исключение при удалении:', error);
         showNotification('Ошибка удаления операции!', 'error');
       }
     } else {
